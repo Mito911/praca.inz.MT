@@ -1,27 +1,8 @@
-# Java / Maven / Gradle
-target/
-build/
-*.iml
-.mvn/wrapper/maven-wrapper.jar
-.gradle/
-
-# Node
-node_modules/
-dist/
-*.tsbuildinfo
-
-# IDE
-.idea/
-.vscode/
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs & env
-logs/
+# Build artifacts
+/backend/target/
+/frontend/node_modules/
+/.idea/
+/.vscode/
 *.log
-.env
-.env.*
-
+/backend/.env
+/frontend/.env
