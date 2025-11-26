@@ -8,6 +8,6 @@ class BackendApplicationTests {
 
 	@Test
 	void contextLoads() {
+		// tylko sprawdzenie, że kontekst się podnosi
 	}
-
 }
