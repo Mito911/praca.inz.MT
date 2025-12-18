@@ -29,10 +29,12 @@ function EntriesPage() {
   const [languages, setLanguages] = useState<LanguageDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
 
+  // edycja istniejącego wpisu
   const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
   const [editingPhrase, setEditingPhrase] = useState<string>("");
   const [editingTranslation, setEditingTranslation] = useState<string>("");
 
+  // formularz dodawania
   const [form, setForm] = useState<FormState>({
     languageId: "",
     categoryId: "",
@@ -40,7 +42,16 @@ function EntriesPage() {
     translation: "",
   });
 
-  // --------- ŁADOWANIE DANYCH ----------
+  // filtry listy
+  const [filterLanguageId, setFilterLanguageId] = useState<number | "">("");
+  const [filterCategoryId, setFilterCategoryId] = useState<number | "">("");
+  const [filterSearch, setFilterSearch] = useState<string>("");
+
+
+
+
+
+  // ------------ ŁADOWANIE DANYCH ------------- //
 
   useEffect(() => {
     async function load() {
@@ -52,6 +63,7 @@ function EntriesPage() {
           getCategories(),
           getEntries(),
         ]);
+
         setLanguages(langs);
         setCategories(cats);
         setEntries(ents);
@@ -65,7 +77,7 @@ function EntriesPage() {
     load();
   }, []);
 
-  // --------- FORMULARZ DODAWANIA ----------
+  // ------------ OBSŁUGA FORMULARZA ------------- //
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({
@@ -118,10 +130,12 @@ function EntriesPage() {
     }
   }
 
-  // --------- USUWANIE ----------
+  // ------------ USUWANIE ------------- //
 
   async function handleDelete(id: number) {
-    if (!confirm("Na pewno usunąć to słówko?")) return;
+    if (!confirm("Na pewno usunąć to słówko?")) {
+      return;
+    }
 
     try {
       await deleteEntry(id);
@@ -131,7 +145,7 @@ function EntriesPage() {
     }
   }
 
-  // --------- EDYCJA ----------
+  // ------------ EDYCJA ------------- //
 
   function startEditEntry(entry: EntryDto) {
     setEditingEntryId(entry.id);
@@ -172,19 +186,52 @@ function EntriesPage() {
     }
   }
 
-  // kategorie tylko dla wybranego języka
-  const filteredCategories =
+  // ------------ FILTRY ------------- //
+
+  const filteredCategoriesForForm =
     form.languageId === ""
       ? []
       : categories.filter((c) => c.languageId === Number(form.languageId));
 
-  // --------- RENDER ----------
+  const categoriesForFilter =
+    filterLanguageId === ""
+      ? categories
+      : categories.filter((c) => c.languageId === Number(filterLanguageId));
+
+  const safeEntries = Array.isArray(entries) ? entries : [];
+
+  const visibleEntries = safeEntries.filter((e) => {
+    if (filterLanguageId !== "" && e.languageId !== Number(filterLanguageId)) {
+      return false;
+    }
+    if (
+      filterCategoryId !== "" &&
+      e.categoryId !== Number(filterCategoryId)
+    ) {
+      return false;
+    }
+    if (filterSearch.trim()) {
+      const text = `${e.term} ${e.translation}`.toLowerCase();
+      if (!text.includes(filterSearch.trim().toLowerCase())) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  function clearFilters() {
+    setFilterLanguageId("");
+    setFilterCategoryId("");
+    setFilterSearch("");
+  }
+
+  // ------------ RENDER ------------- //
 
   return (
     <div className="page">
       <h1>Słówka / wpisy w systemie</h1>
 
-      {/* FORMULARZ DODAWANIA */}
+      {/* Formularz dodawania */}
       <form className="form" onSubmit={handleSubmit}>
         <div className="form-row">
           <label>
@@ -220,7 +267,7 @@ function EntriesPage() {
               disabled={form.languageId === ""}
             >
               <option value="">-- bez kategorii --</option>
-              {filteredCategories.map((c) => (
+              {filteredCategoriesForForm.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -249,28 +296,93 @@ function EntriesPage() {
           </label>
         </div>
 
-        <button
-          className="btn-primary"
-          type="submit"
-          disabled={status === "loading"}
-        >
+        <button className="btn-primary" type="submit" disabled={status === "loading"}>
           Dodaj słówko
         </button>
 
         {error && <p className="error">{error}</p>}
       </form>
 
-      {/* LISTA SŁÓWEK */}
+      {/* FILTRY LISTY */}
+      <section className="filters">
+        <div className="form-row">
+          <label>
+            Język (filtr):
+            <select
+              value={filterLanguageId}
+              onChange={(e) =>
+                setFilterLanguageId(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+            >
+              <option value="">-- wszystkie --</option>
+              {languages.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name} ({l.code})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Kategoria (filtr):
+            <select
+              value={filterCategoryId}
+              onChange={(e) =>
+                setFilterCategoryId(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+            >
+              <option value="">-- wszystkie --</option>
+              {categoriesForFilter.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Szukaj (fraza / tłumaczenie):
+            <input
+              type="text"
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              placeholder="np. animal, zwierzę..."
+            />
+          </label>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={clearFilters}
+          >
+            Wyczyść filtry
+          </button>
+        </div>
+      </section>
+
+      {/* Lista słówek */}
       <section className="list-section">
         {status === "loading" && entries.length === 0 && (
           <p>Ładowanie słówek...</p>
         )}
 
-        {status === "ok" && entries.length === 0 && (
-          <p>Brak słówek w bazie.</p>
+        {status === "error" && (
+          <p className="error">
+            Błąd podczas ładowania słówek: {error}
+          </p>
         )}
 
-        {entries.length > 0 && (
+        {status === "ok" &&
+          entries.length > 0 &&
+          visibleEntries.length === 0 && (
+            <p>Brak słówek dla wybranych filtrów.</p>
+          )}
+
+        {visibleEntries.length > 0 && (
           <table className="data-table">
             <thead>
               <tr>
@@ -283,12 +395,13 @@ function EntriesPage() {
               </tr>
             </thead>
             <tbody>
-              {entries.map((e) => {
+              {visibleEntries.map((e) => {
                 const lang = languages.find((l) => l.id === e.languageId);
                 const cat =
                   e.categoryId != null
                     ? categories.find((c) => c.id === e.categoryId)
                     : null;
+
                 const isEditing = editingEntryId === e.id;
 
                 return (
@@ -297,7 +410,6 @@ function EntriesPage() {
                     <td>{lang ? `${lang.name} (${lang.code})` : e.languageId}</td>
                     <td>{cat ? cat.name : "-"}</td>
 
-                    {/* FRAZA */}
                     <td>
                       {isEditing ? (
                         <input
@@ -310,7 +422,6 @@ function EntriesPage() {
                       )}
                     </td>
 
-                    {/* TŁUMACZENIE */}
                     <td>
                       {isEditing ? (
                         <input
@@ -325,7 +436,6 @@ function EntriesPage() {
                       )}
                     </td>
 
-                    {/* AKCJE */}
                     <td>
                       {isEditing ? (
                         <>
@@ -369,10 +479,13 @@ function EntriesPage() {
             </tbody>
           </table>
         )}
+
+        {status === "ok" && entries.length === 0 && (
+          <p>Brak słówek w bazie.</p>
+        )}
       </section>
     </div>
   );
 }
 
 export default EntriesPage;
-
