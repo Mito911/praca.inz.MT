@@ -8,6 +8,11 @@ import EntriesPage from "./pages/EntriesPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminPage from "./pages/AdminPage";
+import RequireAuth from "./routing/RequireAuth";
+import RequireAdmin from "./routing/RequireAdmin";
+import TestsPage from "./pages/TestsPage";
+
+
 
 import { useAuth } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -37,6 +42,10 @@ function AppHeader() {
 
             <NavLink to="/languages" className={({ isActive }) => (isActive ? "nav-btn active" : "nav-btn")}>
               Języki
+            </NavLink>
+
+            <NavLink to="/tests" className={({ isActive }) => (isActive ? "nav-btn active" : "nav-btn")}>
+              Testy
             </NavLink>
 
             {isAdmin && (
@@ -81,53 +90,60 @@ export default function App() {
 
         <main className="app-main">
           <Routes>
-            <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/languages" replace />} />
-            <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/languages" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
             <Route
-              path="/languages"
+              path="/health"
               element={
-                <ProtectedRoute>
-                  <LanguagesPage />
-                </ProtectedRoute>
+                <RequireAuth>
+                  <HealthPage />
+                </RequireAuth>
               }
             />
             <Route
               path="/categories"
               element={
-                <ProtectedRoute>
+                <RequireAuth>
                   <CategoriesPage />
-                </ProtectedRoute>
+                </RequireAuth>
               }
             />
             <Route
               path="/entries"
               element={
-                <ProtectedRoute>
+                <RequireAuth>
                   <EntriesPage />
-                </ProtectedRoute>
+                </RequireAuth>
               }
             />
             <Route
-              path="/health"
+              path="/languages"
               element={
-                <ProtectedRoute>
-                  <HealthPage />
-                </ProtectedRoute>
+                <RequireAuth>
+                  <LanguagesPage />
+                </RequireAuth>
               }
             />
+
+            <Route
+            path="/tests"
+            element={
+            <TestsPage />} />
+
 
             <Route
               path="/admin"
               element={
-                <AdminRoute>
+                <RequireAdmin>
                   <AdminPage />
-                </AdminRoute>
+                </RequireAdmin>
               }
             />
 
-            <Route path="*" element={<Navigate to={user ? "/languages" : "/login"} replace />} />
+            <Route path="*" element={<Navigate to="/languages" replace />} />
           </Routes>
+
         </main>
       </div>
     </BrowserRouter>

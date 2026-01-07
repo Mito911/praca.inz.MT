@@ -5,6 +5,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 public interface EntryRepository extends JpaRepository<Entry, Long> {
 
     @Query(
@@ -55,4 +58,28 @@ public interface EntryRepository extends JpaRepository<Entry, Long> {
             @Param("tagsCsv") String tagsCsv,
             Pageable pageable
     );
+
+    // ====== TESTY (generator pytań) ======
+
+    List<Entry> findByLanguageId(Long languageId);
+
+    List<Entry> findByLanguageIdAndCreatedAtAfter(Long languageId, LocalDateTime after);
+
+    List<Entry> findByLanguageIdAndCategoryId(Long languageId, Long categoryId);
+
+    List<Entry> findByLanguageIdAndCategoryIdAndCreatedAtAfter(
+            Long languageId,
+            Long categoryId,
+            LocalDateTime after
+    );
+
+    List<Entry> findByLanguageIdOrderByCreatedAtDesc(Long languageId, Pageable pageable);
+
+    List<Entry> findByLanguageIdAndCategoryIdOrderByCreatedAtDesc(
+            Long languageId,
+            Long categoryId,
+            Pageable pageable
+    );
+
+
 }

@@ -195,3 +195,46 @@ input:focus, select:focus {
   }
 }
 
+
+.card {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  margin-top: 16px;
+}
+
+.quiz {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+
+.quiz-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.15);
+}
+
+.quiz-input {
+  width: 100%;
+}
+
+.quiz-answer {
+  opacity: 0.9;
+  font-size: 14px;
+}
+
+@media (min-width: 900px) {
+  .quiz-row {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
+  }
+  .quiz-answer {
+    grid-column: 1 / -1;
+  }
+}
+

@@ -274,3 +274,34 @@ export async function adminResetPassword(
   }
 }
 
+export type TestMode = "DAY" | "WEEK" | "MONTH" | "ALL" | "CATEGORY" | "LAST";
+export type TestDirection = "TERM_TO_TRANSLATION" | "TRANSLATION_TO_TERM";
+
+export type TestGenerateRequestDto = {
+  mode: TestMode;
+  languageId: number;
+  categoryId?: number | null;
+  count: number;
+  direction: TestDirection;
+};
+
+export type TestQuestionDto = {
+  entryId: number;
+  prompt: string;
+  expected: string;
+};
+
+export type TestGenerateResponseDto = {
+  questions: TestQuestionDto[];
+  totalAvailable: number;
+};
+
+export async function generateTest(body: TestGenerateRequestDto): Promise<TestGenerateResponseDto> {
+  const res = await fetch(`${API_BASE_URL}/api/tests/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<TestGenerateResponseDto>(res);
+}
+

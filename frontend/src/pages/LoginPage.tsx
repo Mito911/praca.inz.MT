@@ -24,8 +24,9 @@ export default function LoginPage() {
     try {
       setLoading(true);
       const resp = await loginRequest({ email: email.trim(), password });
-      auth.login({ email: resp.email, token: resp.token, role: resp.role });
+      auth.login({ id: resp.id, email: resp.email, role: resp.role, token: resp.token });
       navigate("/languages", { replace: true });
+
     } catch (e: any) {
       setError(e?.message ?? "Logowanie nie powiodło się.");
     } finally {

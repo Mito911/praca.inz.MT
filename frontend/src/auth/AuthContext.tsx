@@ -1,6 +1,4 @@
-// src/auth/AuthContext.tsx
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { UserRole } from "../apiClient";
 
 type AuthUser = {
@@ -8,12 +6,12 @@ type AuthUser = {
   email: string;
   role: UserRole;
   token: string;
-};
+} | null;
 
 type AuthContextValue = {
-  user: AuthUser | null;
+  user: AuthUser;
   isAdmin: boolean;
-  login: (u: AuthUser) => void;
+  login: (data: { id: number; email: string; role: UserRole; token: string }) => void;
   logout: () => void;
 };
 
@@ -25,26 +23,27 @@ const LS_ROLE = "authRole";
 const LS_ID = "authId";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser>(null);
 
   useEffect(() => {
     const token = localStorage.getItem(LS_TOKEN);
     const email = localStorage.getItem(LS_EMAIL);
     const role = localStorage.getItem(LS_ROLE) as UserRole | null;
-    const idStr = localStorage.getItem(LS_ID);
+    const idRaw = localStorage.getItem(LS_ID);
 
-    if (token && email && role && idStr) {
-      const id = Number(idStr);
-      if (!Number.isNaN(id)) setUser({ id, email, role, token });
+    const id = idRaw ? Number(idRaw) : NaN;
+
+    if (token && email && role && Number.isFinite(id)) {
+      setUser({ id, email, role, token });
     }
   }, []);
 
-  function login(u: AuthUser) {
-    localStorage.setItem(LS_TOKEN, u.token);
-    localStorage.setItem(LS_EMAIL, u.email);
-    localStorage.setItem(LS_ROLE, u.role);
-    localStorage.setItem(LS_ID, String(u.id));
-    setUser(u);
+  function login(data: { id: number; email: string; role: UserRole; token: string }) {
+    localStorage.setItem(LS_TOKEN, data.token);
+    localStorage.setItem(LS_EMAIL, data.email);
+    localStorage.setItem(LS_ROLE, data.role);
+    localStorage.setItem(LS_ID, String(data.id));
+    setUser({ ...data });
   }
 
   function logout() {
@@ -55,13 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  const isAdmin = useMemo(() => user?.role === "ADMIN", [user]);
+  const value = useMemo<AuthContextValue>(() => {
+    return {
+      user,
+      isAdmin: user?.role === "ADMIN",
+      login,
+      logout,
+    };
+  }, [user]);
 
-  return (
-    <AuthContext.Provider value={{ user, isAdmin, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
@@ -69,5 +71,4 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
   return ctx;
 }
-
 
