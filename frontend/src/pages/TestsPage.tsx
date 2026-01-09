@@ -3,9 +3,12 @@ import {
   generateTest,
   getCategories,
   getLanguages,
+  getTestHistory,
+  saveTestHistory,
   type CategoryDto,
   type LanguageDto,
   type TestDirection,
+  type TestHistoryDto,
   type TestMode,
   type TestQuestionDto,
 } from "../apiClient";
@@ -16,6 +19,7 @@ type Status = "idle" | "loading" | "ready" | "done" | "error";
 export default function TestsPage() {
   const { user } = useAuth();
 
+
   const [langs, setLangs] = useState<LanguageDto[]>([]);
   const [cats, setCats] = useState<CategoryDto[]>([]);
   const [status, setStatus] = useState<Status>("idle");
@@ -23,13 +27,29 @@ export default function TestsPage() {
 
   const [languageId, setLanguageId] = useState<number | "">("");
   const [mode, setMode] = useState<TestMode>("WEEK");
-  const [direction, setDirection] = useState<TestDirection>("TERM_TO_TRANSLATION");
+  const [direction, setDirection] =
+    useState<TestDirection>("TERM_TO_TRANSLATION");
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [count, setCount] = useState<number>(10);
 
   const [questions, setQuestions] = useState<TestQuestionDto[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<{ ok: number; total: number } | null>(null);
+
+  const [history, setHistory] = useState<TestHistoryDto[]>([]);
+
+  async function loadHistory() {
+    try {
+      const data = await getTestHistory(user!.id, 20);
+      setHistory(data);
+    } catch {
+      // historia nie jest krytyczna – pomijamy błąd
+    }
+  }
+
+ useEffect(() => {
+   if (user) loadHistory();
+ }, [user]);
 
   useEffect(() => {
     async function load() {
@@ -47,7 +67,7 @@ export default function TestsPage() {
 
   const catsForLang = useMemo(() => {
     if (languageId === "") return [];
-    return cats.filter(c => c.languageId === Number(languageId));
+    return cats.filter((c) => c.languageId === Number(languageId));
   }, [cats, languageId]);
 
   async function handleGenerate(e: FormEvent) {
@@ -70,6 +90,7 @@ export default function TestsPage() {
 
     try {
       setStatus("loading");
+
       const resp = await generateTest({
         mode,
         languageId: Number(languageId),
@@ -87,16 +108,36 @@ export default function TestsPage() {
     }
   }
 
-  function finish() {
+  async function finish() {
     const norm = (s: string) => s.trim().toLowerCase();
     let ok = 0;
+
     for (const q of questions) {
       const a = answers[q.entryId] ?? "";
       if (norm(a) === norm(q.expected)) ok++;
     }
+
     setScore({ ok, total: questions.length });
     setStatus("done");
+
+    // zapis historii (nie blokuje UI)
+    try {
+      await saveTestHistory({
+        userId: user!.id,
+        languageId: Number(languageId),
+        categoryId: categoryId === "" ? null : Number(categoryId),
+        mode,
+        direction,
+        total: questions.length,
+        correct: ok,
+      });
+
+      await loadHistory(); // odśwież listę pod spodem
+    } catch {
+      // historia nie jest krytyczna – możesz też ustawić error jeśli chcesz
+    }
   }
+
 
   if (!user) {
     return (
@@ -115,15 +156,29 @@ export default function TestsPage() {
         <div className="form-row">
           <label>
             Język:
-            <select value={languageId} onChange={(e) => setLanguageId(e.target.value === "" ? "" : Number(e.target.value))}>
+            <select
+              value={languageId}
+              onChange={(e) =>
+                setLanguageId(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              disabled={status === "loading"}
+            >
               <option value="">-- wybierz --</option>
-              {langs.map(l => <option key={l.id} value={l.id}>{l.name} ({l.code})</option>)}
+              {langs.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name} ({l.code})
+                </option>
+              ))}
             </select>
           </label>
 
           <label>
             Tryb:
-            <select value={mode} onChange={(e) => setMode(e.target.value as TestMode)}>
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value as TestMode)}
+              disabled={status === "loading"}
+            >
               <option value="DAY">Z dnia</option>
               <option value="WEEK">Z tygodnia</option>
               <option value="MONTH">Z miesiąca</option>
@@ -135,7 +190,11 @@ export default function TestsPage() {
 
           <label>
             Kierunek:
-            <select value={direction} onChange={(e) => setDirection(e.target.value as TestDirection)}>
+            <select
+              value={direction}
+              onChange={(e) => setDirection(e.target.value as TestDirection)}
+              disabled={status === "loading"}
+            >
               <option value="TERM_TO_TRANSLATION">Termin → Tłumaczenie</option>
               <option value="TRANSLATION_TO_TERM">Tłumaczenie → Termin</option>
             </select>
@@ -149,6 +208,7 @@ export default function TestsPage() {
               max={50}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
+              disabled={status === "loading"}
             />
           </label>
         </div>
@@ -158,11 +218,17 @@ export default function TestsPage() {
             Kategoria:
             <select
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value === "" ? "" : Number(e.target.value))}
-              disabled={languageId === ""}
+              onChange={(e) =>
+                setCategoryId(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              disabled={languageId === "" || status === "loading"}
             >
               <option value="">-- opcjonalnie --</option>
-              {catsForLang.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {catsForLang.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -174,12 +240,14 @@ export default function TestsPage() {
         {error && <p className="error">{error}</p>}
       </form>
 
-      {status === "ready" || status === "done" ? (
+      {(status === "ready" || status === "done") && (
         <section className="card">
           <h2>Rozwiąż test</h2>
 
           {score && (
-            <p><b>Wynik:</b> {score.ok} / {score.total}</p>
+            <p>
+              <b>Wynik:</b> {score.ok} / {score.total}
+            </p>
           )}
 
           <div className="quiz">
@@ -192,7 +260,9 @@ export default function TestsPage() {
                 <input
                   className="quiz-input"
                   value={answers[q.entryId] ?? ""}
-                  onChange={(e) => setAnswers(prev => ({ ...prev, [q.entryId]: e.target.value }))}
+                  onChange={(e) =>
+                    setAnswers((prev) => ({ ...prev, [q.entryId]: e.target.value }))
+                  }
                   disabled={status === "done"}
                   placeholder="Twoja odpowiedź..."
                 />
@@ -206,13 +276,49 @@ export default function TestsPage() {
             ))}
           </div>
 
-          {status !== "done" ? (
-            <button className="btn-primary" type="button" onClick={finish} disabled={questions.length === 0}>
+          {status !== "done" && (
+            <button
+              className="btn-primary"
+              type="button"
+              onClick={finish}
+              disabled={questions.length === 0}
+            >
               Zakończ i policz wynik
             </button>
-          ) : null}
+          )}
         </section>
-      ) : null}
+      )}
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <h2>Historia ostatnich testów</h2>
+
+        {history.length === 0 ? (
+          <p className="muted">Brak zapisanych testów.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tryb</th>
+                <th>Kierunek</th>
+                <th>Wynik</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.id}>
+                  <td>{new Date(h.createdAt).toLocaleString()}</td>
+                  <td>{h.mode}</td>
+                  <td>{h.direction}</td>
+                  <td>
+                    {h.correct}/{h.total}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </div>
   );
 }

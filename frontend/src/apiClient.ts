@@ -305,3 +305,42 @@ export async function generateTest(body: TestGenerateRequestDto): Promise<TestGe
   return handleResponse<TestGenerateResponseDto>(res);
 }
 
+
+export type TestMode = "ALL" | "CATEGORY" | "DAY" | "WEEK" | "MONTH" | "LAST";
+export type TestDirection = "TERM_TO_TRANSLATION" | "TRANSLATION_TO_TERM";
+
+export type TestHistoryDto = {
+  id: number;
+  languageId: number;
+  categoryId: number | null;
+  mode: TestMode;
+  direction: TestDirection;
+  total: number;
+  correct: number;
+  createdAt: string;
+};
+
+export async function saveTestHistory(body: {
+  languageId: number;
+  categoryId: number | null;
+  mode: TestMode;
+  direction: TestDirection;
+  total: number;
+  correct: number;
+}): Promise<TestHistoryDto> {
+  const res = await fetch(`${API_BASE_URL}/api/tests/history`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<TestHistoryDto>(res);
+}
+
+export async function getTestHistory(userId: number, limit = 20): Promise<TestHistoryDto[]> {
+  const res = await fetch(`${API_BASE_URL}/api/tests/history?userId=${userId}&limit=${limit}`, {
+    headers: { ...authHeaders() },
+  });
+  return handleResponse<TestHistoryDto[]>(res);
+}
+
+
