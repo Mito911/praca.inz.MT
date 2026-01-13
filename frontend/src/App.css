@@ -237,4 +237,11 @@ input:focus, select:focus {
     grid-column: 1 / -1;
   }
 }
-
+.translate-row {
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.translate-row label {
+  max-width: 220px;
+}

@@ -1,5 +1,6 @@
 // src/pages/EntriesPage.tsx
 import { useEffect, useState, FormEvent } from "react";
+import { translateRequest } from "../apiClient";
 import {
   getEntries,
   getLanguages,
@@ -34,6 +35,10 @@ function EntriesPage() {
   const [editingPhrase, setEditingPhrase] = useState<string>("");
   const [editingTranslation, setEditingTranslation] = useState<string>("");
 
+  // tłumaczenie
+  const [trSource, setTrSource] = useState<"en" | "pl">("en");
+  const [trTarget, setTrTarget] = useState<"en" | "pl">("pl");
+
   // formularz dodawania
   const [form, setForm] = useState<FormState>({
     languageId: "",
@@ -46,10 +51,6 @@ function EntriesPage() {
   const [filterLanguageId, setFilterLanguageId] = useState<number | "">("");
   const [filterCategoryId, setFilterCategoryId] = useState<number | "">("");
   const [filterSearch, setFilterSearch] = useState<string>("");
-
-
-
-
 
   // ------------ ŁADOWANIE DANYCH ------------- //
 
@@ -175,9 +176,7 @@ function EntriesPage() {
     try {
       setStatus("loading");
       const updated = await updateEntry(entry.id, body);
-      setEntries((prev) =>
-        prev.map((e) => (e.id === entry.id ? updated : e))
-      );
+      setEntries((prev) => prev.map((e) => (e.id === entry.id ? updated : e)));
       cancelEditEntry();
       setStatus("ok");
     } catch (e: any) {
@@ -204,10 +203,7 @@ function EntriesPage() {
     if (filterLanguageId !== "" && e.languageId !== Number(filterLanguageId)) {
       return false;
     }
-    if (
-      filterCategoryId !== "" &&
-      e.categoryId !== Number(filterCategoryId)
-    ) {
+    if (filterCategoryId !== "" && e.categoryId !== Number(filterCategoryId)) {
       return false;
     }
     if (filterSearch.trim()) {
@@ -223,6 +219,34 @@ function EntriesPage() {
     setFilterLanguageId("");
     setFilterCategoryId("");
     setFilterSearch("");
+  }
+
+  // ------------ TŁUMACZENIE ------------- //
+
+  async function handleTranslate() {
+    setError(null);
+
+    if (!form.phrase.trim()) {
+      setError("Wpisz frazę, żeby ją przetłumaczyć.");
+      return;
+    }
+
+    try {
+      const resp = await translateRequest({
+        text: form.phrase.trim(),
+        source: trSource,
+        target: trTarget,
+      });
+
+      setForm((prev) => ({
+        ...prev,
+        translation: resp.translatedText ?? "",
+      }));
+    } catch (e: any) {
+      setError(e?.message ?? "Nie udało się przetłumaczyć.");
+    }
+
+    console.log("translate", { text: form.phrase.trim(), source: trSource, target: trTarget });
   }
 
   // ------------ RENDER ------------- //
@@ -296,7 +320,45 @@ function EntriesPage() {
           </label>
         </div>
 
-        <button className="btn-primary" type="submit" disabled={status === "loading"}>
+
+        <div className="form-row translate-row">
+          <label>
+            Kierunek tłumaczenia:
+            <select
+              value={`${trSource}-${trTarget}`}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "en-pl") {
+                  setTrSource("en");
+                  setTrTarget("pl");
+                }
+                if (val === "pl-en") {
+                  setTrSource("pl");
+                  setTrTarget("en");
+                }
+              }}
+              disabled={form.phrase.trim().length === 0}
+            >
+              <option value="en-pl">EN → PL</option>
+              <option value="pl-en">PL → EN</option>
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleTranslate}
+            disabled={status === "loading" || form.phrase.trim().length === 0}
+          >
+            Przetłumacz do pola
+          </button>
+        </div>
+
+        <button
+          className="btn-primary"
+          type="submit"
+          disabled={status === "loading"}
+        >
           Dodaj słówko
         </button>
 
@@ -354,15 +416,13 @@ function EntriesPage() {
             />
           </label>
 
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={clearFilters}
-          >
+          <button type="button" className="btn-secondary" onClick={clearFilters}>
             Wyczyść filtry
           </button>
         </div>
       </section>
+
+
 
       {/* Lista słówek */}
       <section className="list-section">
@@ -371,16 +431,12 @@ function EntriesPage() {
         )}
 
         {status === "error" && (
-          <p className="error">
-            Błąd podczas ładowania słówek: {error}
-          </p>
+          <p className="error">Błąd podczas ładowania słówek: {error}</p>
         )}
 
-        {status === "ok" &&
-          entries.length > 0 &&
-          visibleEntries.length === 0 && (
-            <p>Brak słówek dla wybranych filtrów.</p>
-          )}
+        {status === "ok" && entries.length > 0 && visibleEntries.length === 0 && (
+          <p>Brak słówek dla wybranych filtrów.</p>
+        )}
 
         {visibleEntries.length > 0 && (
           <table className="data-table">
@@ -427,9 +483,7 @@ function EntriesPage() {
                         <input
                           type="text"
                           value={editingTranslation}
-                          onChange={(ev) =>
-                            setEditingTranslation(ev.target.value)
-                          }
+                          onChange={(ev) => setEditingTranslation(ev.target.value)}
                         />
                       ) : (
                         e.translation
@@ -480,12 +534,10 @@ function EntriesPage() {
           </table>
         )}
 
-        {status === "ok" && entries.length === 0 && (
-          <p>Brak słówek w bazie.</p>
-        )}
+        {status === "ok" && entries.length === 0 && <p>Brak słówek w bazie.</p>}
       </section>
     </div>
   );
 }
 
-export default EntriesPage;
+export default EntriesPage

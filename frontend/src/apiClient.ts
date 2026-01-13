@@ -162,7 +162,6 @@ export async function deleteCategory(id: number): Promise<void> {
   }
 }
 
-
 // /api/entries
 export async function getEntries(): Promise<EntryDto[]> {
   const res = await fetch(`${API_BASE_URL}/api/entries`, {
@@ -259,14 +258,11 @@ export async function adminResetPassword(
   userId: number,
   newPassword: string
 ): Promise<void> {
-  const res = await fetch(
-    `${API_BASE_URL}/api/admin/users/${userId}/password`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ password: newPassword }),
-    }
-  );
+  const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/password`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ password: newPassword }),
+  });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -274,6 +270,7 @@ export async function adminResetPassword(
   }
 }
 
+// --- TESTY ---
 export type TestMode = "DAY" | "WEEK" | "MONTH" | "ALL" | "CATEGORY" | "LAST";
 export type TestDirection = "TERM_TO_TRANSLATION" | "TRANSLATION_TO_TERM";
 
@@ -296,7 +293,9 @@ export type TestGenerateResponseDto = {
   totalAvailable: number;
 };
 
-export async function generateTest(body: TestGenerateRequestDto): Promise<TestGenerateResponseDto> {
+export async function generateTest(
+  body: TestGenerateRequestDto
+): Promise<TestGenerateResponseDto> {
   const res = await fetch(`${API_BASE_URL}/api/tests/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -304,10 +303,6 @@ export async function generateTest(body: TestGenerateRequestDto): Promise<TestGe
   });
   return handleResponse<TestGenerateResponseDto>(res);
 }
-
-
-export type TestMode = "ALL" | "CATEGORY" | "DAY" | "WEEK" | "MONTH" | "LAST";
-export type TestDirection = "TERM_TO_TRANSLATION" | "TRANSLATION_TO_TERM";
 
 export type TestHistoryDto = {
   id: number;
@@ -336,11 +331,40 @@ export async function saveTestHistory(body: {
   return handleResponse<TestHistoryDto>(res);
 }
 
-export async function getTestHistory(userId: number, limit = 20): Promise<TestHistoryDto[]> {
-  const res = await fetch(`${API_BASE_URL}/api/tests/history?userId=${userId}&limit=${limit}`, {
-    headers: { ...authHeaders() },
-  });
+export async function getTestHistory(
+  userId: number,
+  limit = 20
+): Promise<TestHistoryDto[]> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/tests/history?userId=${userId}&limit=${limit}`,
+    {
+      headers: { ...authHeaders() },
+    }
+  );
   return handleResponse<TestHistoryDto[]>(res);
+}
+
+// --- TRANSLATE ---
+export type TranslateRequestDto = {
+  text: string;
+  source?: string; // domyślnie np. "en"
+  target?: string; // domyślnie np. "pl"
+};
+
+export type TranslateResponseDto = {
+  translatedText: string;
+};
+
+export async function translateRequest(
+  body: TranslateRequestDto
+): Promise<TranslateResponseDto> {
+  const res = await fetch(`${API_BASE_URL}/api/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() }, // jeśli permitAll, authHeaders nie szkodzi
+    body: JSON.stringify(body),
+  });
+
+  return handleResponse<TranslateResponseDto>(res);
 }
 
 

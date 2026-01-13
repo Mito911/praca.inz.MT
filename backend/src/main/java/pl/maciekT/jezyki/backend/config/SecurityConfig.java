@@ -60,11 +60,13 @@ public class SecurityConfig {
                 // ⬇️ WŁĄCZAMY CORS
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+
                 .sessionManagement(sm ->
                         sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/health", "/error").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/translate").permitAll()
 
                         .anyRequest().authenticated()
                 )
