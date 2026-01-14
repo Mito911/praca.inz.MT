@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import "./App.css";
+import QuickAddPage from "./pages/QuickAddPage";
 
 import LanguagesPage from "./pages/LanguagesPage";
 import HealthPage from "./pages/HealthPage";
@@ -131,6 +132,7 @@ export default function App() {
             element={
             <TestsPage />} />
 
+            <Route path="/quick-add" element={<QuickAddPage />} />
 
             <Route
               path="/admin"
